@@ -1,0 +1,20 @@
+{
+  "name": "bookdownload",
+  "version": "1.0.0",
+  "description": "",
+  "main": "downloader.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "puppeteer-core": "^25.9.0"
+  }
+}

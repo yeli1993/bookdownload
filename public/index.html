@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>笔趣阁 · 在线小说</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%237c6cff'/%3E%3Cpath d='M9 7h12a2 2 0 0 1 2 2v16l-2.5-1.6L18 25l-2-1.3L14 25l-2.5-1.6L9 25V9a2 2 0 0 1 0 0z' fill='%23fff'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg-0: #0b0d14;
+    --bg-1: #11141f;
+    --bg-2: #161a2b;
+    --card: rgba(28, 32, 51, 0.55);
+    --card-brd: rgba(255, 255, 255, 0.07);
+    --txt-0: #f3f5ff;
+    --txt-1: #aab0ce;
+    --txt-2: #6b7196;
+    --accent: #7c6cff;
+    --accent-2: #b06cff;
+    --ok: #34d399;
+    --warn: #fbbf24;
+    --err: #f87171;
+    --grad: linear-gradient(135deg, #7c6cff 0%, #b06cff 100%);
+    --shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.6);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    color: var(--txt-0);
+    background:
+      radial-gradient(1100px 600px at 12% -8%, rgba(124, 108, 255, 0.18), transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, rgba(176, 108, 255, 0.14), transparent 55%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-0) 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.16); }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 60;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px;
+    backdrop-filter: blur(14px);
+    background: rgba(11, 13, 20, 0.6);
+    border-bottom: 1px solid var(--card-brd);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--grad);
+    display: grid; place-items: center;
+    box-shadow: 0 6px 18px rgba(124, 108, 255, 0.5);
+  }
+  .logo svg { width: 20px; height: 20px; fill: #fff; }
+  .brand h1 { font-size: 17px; font-weight: 650; letter-spacing: .3px; }
+  .brand small { display: block; font-size: 11px; color: var(--txt-2); font-weight: 400; margin-top: -2px; }
+  .top-actions { display: flex; gap: 10px; align-items: center; }
+  .badge {
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 10px;
+    background: var(--grad); color: #fff; font-size: 11px; font-weight: 700;
+    display: inline-grid; place-items: center; line-height: 1;
+  }
+
+  .btn {
+    border: 1px solid var(--card-brd);
+    background: rgba(255,255,255,0.04);
+    color: var(--txt-0);
+    padding: 9px 16px; border-radius: 10px;
+    font-size: 13px; cursor: pointer;
+    transition: all .18s ease; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: inherit;
+  }
+  .btn:hover { background: rgba(255,255,255,0.09); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .btn-primary {
+    background: var(--grad); border: none; color: #fff;
+    box-shadow: 0 8px 22px -6px rgba(124, 108, 255, 0.65);
+  }
+  .btn-primary:hover { filter: brightness(1.08); background: var(--grad); }
+  .btn-ghost { background: transparent; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+  .btn-danger { color: var(--err); border-color: rgba(248,113,113,.3); }
+  .btn-danger:hover { background: rgba(248,113,113,.12); }
+
+  /* ---------- 视图切换 ---------- */
+  .view { display: none; animation: fadeUp .3s ease both; }
+  .view.active { display: block; }
+  .view.reader.active { display: flex; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px; }
+
+  /* ---------- 首页 ---------- */
+  .hero { text-align: center; padding: 18px 0 26px; }
+  .hero h2 { font-size: 26px; font-weight: 700; letter-spacing: .5px; }
+  .hero h2 span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--txt-2); font-size: 13px; margin-top: 6px; }
+  .search-box { position: relative; max-width: 660px; margin: 22px auto 0; display: flex; gap: 10px; align-items: center; }
+  .source-select {
+    flex-shrink: 0; height: 52px; padding: 0 14px;
+    font-size: 13px; color: var(--txt-0); cursor: pointer;
+    background: var(--card); border: 1px solid var(--card-brd); border-radius: 12px;
+    outline: none; backdrop-filter: blur(12px); transition: all .2s; font-family: inherit;
+  }
+  .source-select:focus { border-color: rgba(124,108,255,.55); }
+  .source-select option { background: #161a2b; color: var(--txt-0); }
+  .search-field { position: relative; flex: 1; min-width: 0; }
+  .search-field input {
+    width: 100%; padding: 16px 96px 16px 18px; font-size: 15px;
+    color: var(--txt-0); background: var(--card);
+    border: 1px solid var(--card-brd); border-radius: 14px;
+    outline: none; transition: all .2s;
+    backdrop-filter: blur(12px); font-family: inherit;
+  }
+  .search-field input::placeholder { color: var(--txt-2); }
+  .search-field input:focus { border-color: rgba(124,108,255,.55); box-shadow: 0 0 0 4px rgba(124,108,255,.12); }
+  .search-field .btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+
+  .chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+  .chip {
+    font-size: 12px; color: var(--txt-1); padding: 6px 12px;
+    border-radius: 20px; border: 1px solid var(--card-brd);
+    background: rgba(255,255,255,0.03); cursor: pointer; transition: all .18s;
+  }
+  .chip:hover { color: var(--txt-0); border-color: rgba(124,108,255,.4); }
+
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 26px 2px 14px; }
+  .section-title h3 { font-size: 15px; font-weight: 600; color: var(--txt-1); }
+  .section-title .count { font-size: 12px; color: var(--txt-2); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--card-brd);
+    border-radius: var(--radius); padding: 16px;
+    display: flex; gap: 14px; position: relative; overflow: hidden;
+    transition: all .22s cubic-bezier(.2,.7,.3,1); animation: fadeUp .4s ease both;
+    backdrop-filter: blur(10px);
+  }
+  .card::before { content:""; position:absolute; inset:0; background: linear-gradient(135deg, rgba(124,108,255,.08), transparent 50%); opacity:0; transition: opacity .22s; pointer-events:none; }
+  .card.clickable { cursor: pointer; }
+  .card:hover { transform: translateY(-4px); border-color: rgba(124,108,255,.35); box-shadow: var(--shadow); }
+  .card:hover::before { opacity: 1; }
+  .cover {
+    width: 64px; height: 86px; flex-shrink: 0; border-radius: 8px;
+    background: linear-gradient(135deg, #2a2f4a, #1b1e30);
+    box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    overflow: hidden; display: grid; place-items: center; color: var(--txt-2);
+  }
+  .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cover .ph { font-size: 22px; opacity: .5; font-weight: 700; }
+  .meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .meta .t { font-size: 15px; font-weight: 600; color: var(--txt-0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta .a { font-size: 12px; color: var(--txt-2); margin-top: 2px; }
+  .meta .intro { font-size: 12.5px; color: var(--txt-1); margin-top: 6px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .meta .act { margin-top: auto; padding-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .empty { text-align: center; color: var(--txt-2); padding: 70px 20px; }
+  .empty .big { font-size: 40px; opacity: .35; font-weight: 800; }
+  .empty p { margin-top: 10px; font-size: 13px; }
+
+  .skeleton-card { height: 118px; border-radius: var(--radius); background: linear-gradient(100deg, rgba(255,255,255,.03) 30%, rgba(255,255,255,.07) 50%, rgba(255,255,255,.03) 70%); background-size: 200% 100%; animation: shim 1.2s infinite; }
+
+  /* ---------- 详情页 ---------- */
+  .detail-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 28px 60px; }
+  .back-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .back-row .crumb { font-size: 13px; color: var(--txt-2); }
+
+  .book-head {
+    display: flex; gap: 26px; padding: 26px;
+    background: var(--card); border: 1px solid var(--card-brd);
+    border-radius: var(--radius); backdrop-filter: blur(12px);
+  }
+  .book-cover {
+    width: 132px; height: 180px; flex-shrink: 0; border-radius: 12px;
+    overflow: hidden; background: linear-gradient(135deg, #2a2f4a, #1b1e30);
+    box-shadow: 0 10px 26px rgba(0,0,0,.45); display: grid; place-items: center;
+    color: var(--txt-2); font-size: 44px; font-weight: 800;
+  }
+  .book-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .book-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .book-info h1 { font-size: 26px; font-weight: 700; }
+  .book-tags { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .tag { font-size: 12px; padding: 3px 10px; border-radius: 8px; font-weight: 500;
+    background: rgba(255,255,255,.05); border: 1px solid var(--card-brd); color: var(--txt-1); }
+  .tag.status { color: var(--ok); background: rgba(52,211,153,.1); border-color: rgba(52,211,153,.25); }
+  .book-intro { font-size: 13.5px; color: var(--txt-1); line-height: 1.9; margin-top: 14px;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .book-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 18px; flex-wrap: wrap; }
+  .book-actions .btn { padding: 11px 22px; font-size: 14px; }
+
+  .catalog-panel {
+    margin-top: 20px; background: var(--card); border: 1px solid var(--card-brd);
+    border-radius: var(--radius); backdrop-filter: blur(12px); overflow: hidden;
+  }
+  .catalog-head { display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+    border-bottom: 1px solid var(--card-brd); flex-wrap: wrap; }
+  .catalog-head h3 { font-size: 15px; font-weight: 600; }
+  .catalog-head .note { font-size: 12px; color: var(--txt-2); }
+  .catalog-search { margin-left: auto; position: relative; }
+  .catalog-search input {
+    width: 220px; padding: 8px 12px; font-size: 13px; color: var(--txt-0);
+    background: rgba(255,255,255,.05); border: 1px solid var(--card-brd);
+    border-radius: 10px; outline: none; font-family: inherit; transition: all .2s;
+  }
+  .catalog-search input:focus { border-color: rgba(124,108,255,.55); }
+  .catalog-list { max-height: 520px; overflow-y: auto; padding: 10px 12px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px 10px; }
+  .cat-item {
+    display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border-radius: 8px;
+    font-size: 13px; color: var(--txt-1); cursor: pointer; transition: all .15s; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .cat-item:hover { background: rgba(124,108,255,.12); color: var(--txt-0); }
+  .cat-item .no { font-size: 11px; color: var(--txt-2); flex-shrink: 0; }
+  .cat-item .ti { overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- 阅读器 ---------- */
+  .reader {
+    /* 布局属性只在激活时生效（见上方 .view.reader.active），否则会覆盖 .view{display:none} 而挡住首页 */
+    flex-direction: column;
+    background: var(--r-bg, #f7f4ef); color: var(--r-fg, #2e2c29);
+  }
+  .view.reader.active {
+    position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column;
+  }
+  .reader.theme-light { --r-bg:#f7f4ef; --r-fg:#2e2c29; --r-sub:#9a948a; --r-bar:#fff; --r-brd:#e6e1d6; --r-ac:#7c6cff; }
+  .reader.theme-sepia { --r-bg:#f5ecd9; --r-fg:#5b4a33; --r-sub:#a28f6e; --r-bar:#efe3cb; --r-brd:#e0d1b0; --r-ac:#8a6a3b; }
+  .reader.theme-green { --r-bg:#cbe8d2; --r-fg:#25402c; --r-sub:#6c8a74; --r-bar:#bfe0c7; --r-brd:#a8cfb3; --r-ac:#2e7d4f; }
+  .reader.theme-dark { --r-bg:#111318; --r-fg:#9aa4bd; --r-sub:#5c6480; --r-bar:#191c24; --r-brd:#262a36; --r-ac:#7c6cff; }
+
+  .reader-bar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+    background: var(--r-bar); border-bottom: 1px solid var(--r-brd); flex-shrink: 0;
+  }
+  .rb-btn {
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--r-brd);
+    background: transparent; color: var(--r-fg); font-size: 15px; cursor: pointer;
+    display: grid; place-items: center; transition: all .15s; font-family: inherit;
+  }
+  .rb-btn:hover { background: rgba(0,0,0,.05); }
+  .rb-title { flex: 1; min-width: 0; text-align: center; }
+  .rb-book { font-size: 12px; color: var(--r-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rb-ch { font-size: 14px; font-weight: 600; color: var(--r-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rb-btn.text { width: auto; padding: 0 14px; font-size: 13px; font-weight: 600; letter-spacing: .5px; }
+
+  .reader-progress { height: 3px; background: var(--r-brd); flex-shrink: 0; }
+  .reader-progress i { display: block; height: 100%; width: 0; background: var(--r-ac); transition: width .3s ease; }
+
+  .reader-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
+  .reader-content {
+    max-width: 720px; margin: 0 auto; padding: 34px 26px 50px;
+    font-size: var(--r-fs, 18px); line-height: var(--r-lh, 1.9);
+    font-family: var(--r-ff, "Songti SC", "SimSun", serif);
+  }
+  .reader-content h1 { font-size: 1.35em; text-align: center; margin-bottom: 26px; font-weight: 700; }
+  .reader-content p { text-indent: 2em; margin-bottom: .9em; word-break: break-word; }
+  .reader-loading { text-align: center; color: var(--r-sub); padding: 80px 0; }
+  .reader-err { text-align: center; color: var(--r-sub); padding: 80px 0; }
+  .reader-err .btn { margin-top: 16px; color: var(--r-fg); border-color: var(--r-brd); }
+
+  .reader-nav {
+    display: flex; gap: 12px; justify-content: center; padding: 14px 16px 22px;
+    background: var(--r-bar); border-top: 1px solid var(--r-brd); flex-shrink: 0;
+  }
+  .reader-nav .btn {
+    min-width: 130px; justify-content: center; color: var(--r-fg);
+    border: 1px solid var(--r-brd); background: transparent;
+  }
+  .reader-nav .btn:hover { background: rgba(0,0,0,.05); transform: none; }
+  .reader-nav .btn.btn-primary { background: var(--r-ac); border: none; color: #fff; }
+  .reader-nav .btn:disabled { opacity: .35; }
+
+  /* ---------- 抽屉 ---------- */
+  .drawer-mask {
+    position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.45);
+    opacity: 0; visibility: hidden; transition: all .25s ease;
+  }
+  .drawer-mask.open { opacity: 1; visibility: visible; }
+  .drawer {
+    position: fixed; top: 0; bottom: 0; z-index: 90; width: 360px; max-width: 88vw;
+    background: var(--bg-2, #161a2b); color: var(--txt-0);
+    display: flex; flex-direction: column;
+    transition: transform .28s cubic-bezier(.2,.7,.3,1);
+    box-shadow: var(--shadow);
+  }
+  .drawer.left { left: 0; transform: translateX(-102%); }
+  .drawer.left.open { transform: translateX(0); }
+  .drawer.right { right: 0; transform: translateX(102%); }
+  .drawer.right.open { transform: translateX(0); }
+  .drawer-head {
+    display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+    border-bottom: 1px solid var(--card-brd); flex-shrink: 0;
+  }
+  .drawer-head h3 { font-size: 15px; font-weight: 600; }
+  .drawer-head input {
+    flex: 1; padding: 8px 12px; font-size: 13px; color: var(--txt-0);
+    background: rgba(255,255,255,.05); border: 1px solid var(--card-brd);
+    border-radius: 10px; outline: none; font-family: inherit;
+  }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 12px; }
+  .drawer-close { margin-left: auto; cursor: pointer; color: var(--txt-2); font-size: 18px; background: none; border: none; }
+
+  /* 阅读器目录（浅色系） */
+  .drawer.chapter { background: var(--r-bar, #fff); color: var(--r-fg, #2e2c29); }
+  .drawer.chapter .drawer-head { border-color: var(--r-brd, #e6e1d6); }
+  .drawer.chapter .drawer-head input {
+    background: rgba(0,0,0,.05); border-color: var(--r-brd, #e6e1d6); color: var(--r-fg);
+  }
+  .drawer.chapter .drawer-close { color: var(--r-sub); }
+  .reader-cat { display: flex; flex-direction: column; gap: 2px; }
+  .reader-cat .rc {
+    padding: 8px 12px; border-radius: 8px; font-size: 13px; color: var(--r-fg);
+    cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: all .12s;
+  }
+  .reader-cat .rc:hover { background: rgba(0,0,0,.06); }
+  .reader-cat .rc.cur { background: var(--r-ac); color: #fff; font-weight: 600; }
+  .reader-cat .rc.miss { color: var(--r-sub); cursor: default; }
+
+  /* 阅读设置 */
+  .set-group { margin-bottom: 22px; }
+  .set-group > label { display: block; font-size: 12px; color: var(--txt-2); margin-bottom: 10px; letter-spacing: .5px; }
+  .set-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .set-opt {
+    padding: 7px 14px; border-radius: 9px; font-size: 13px; cursor: pointer;
+    border: 1px solid var(--card-brd); background: rgba(255,255,255,.04); color: var(--txt-1);
+    transition: all .15s; font-family: inherit;
+  }
+  .set-opt:hover { color: var(--txt-0); }
+  .set-opt.on { background: var(--grad); color: #fff; border-color: transparent; }
+  .set-opt.song { font-family: "Songti SC", "SimSun", serif; }
+  .set-opt.hei { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+  .set-opt.kai { font-family: "KaiTi", "STKaiti", serif; }
+  .size-bar { display: flex; align-items: center; gap: 10px; width: 100%; }
+  .size-bar input[type=range] { flex: 1; accent-color: var(--accent); }
+  .size-val { font-size: 13px; color: var(--txt-1); min-width: 42px; text-align: center; }
+
+  /* ---------- 下载任务抽屉 ---------- */
+  .task-list { display: flex; flex-direction: column; gap: 12px; }
+  .task {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--card-brd);
+    border-radius: 12px; padding: 12px; animation: fadeUp .35s ease both;
+  }
+  .task .tt { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .task .ss { font-size: 11px; color: var(--txt-2); margin-top: 2px; }
+  .bar { height: 8px; border-radius: 6px; background: rgba(255,255,255,.06); margin: 10px 0 6px; overflow: hidden; position: relative; }
+  .bar > i { display: block; height: 100%; background: var(--grad); border-radius: 6px; width: 0; transition: width .25s ease; position: relative; }
+  .bar.run > i::after { content:""; position:absolute; inset:0; background: linear-gradient(45deg, rgba(255,255,255,.18) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.18) 50%, rgba(255,255,255,.18) 75%, transparent 75%); background-size: 16px 16px; animation: stripe 0.8s linear infinite; }
+  .task .stat { display: flex; justify-content: space-between; font-size: 11px; color: var(--txt-2); }
+  .task .ops { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .t-tag { font-size: 10.5px; padding: 2px 8px; border-radius: 8px; font-weight: 600; }
+  .t-tag.run { color: var(--accent); background: rgba(124,108,255,.14); }
+  .t-tag.done { color: var(--ok); background: rgba(52,211,153,.12); }
+  .t-tag.err { color: var(--err); background: rgba(248,113,113,.12); }
+  .t-tag.cxl { color: var(--txt-2); background: rgba(255,255,255,.05); }
+  .tasks-empty { text-align: center; color: var(--txt-2); padding: 50px 10px; font-size: 13px; }
+
+  /* ---------- toast ---------- */
+  .toasts { position: fixed; right: 20px; bottom: 20px; z-index: 200; display: flex; flex-direction: column; gap: 10px; }
+  .toast {
+    background: rgba(20, 24, 38, 0.92); border: 1px solid var(--card-brd);
+    color: var(--txt-0); padding: 12px 16px; border-radius: 12px;
+    font-size: 13px; box-shadow: var(--shadow); backdrop-filter: blur(10px);
+    animation: toastIn .3s ease; min-width: 220px; border-left: 3px solid var(--accent);
+  }
+  .toast.ok { border-left-color: var(--ok); }
+  .toast.err { border-left-color: var(--err); }
+
+  .foot { text-align: center; color: var(--txt-2); font-size: 11px; padding: 24px; }
+
+  .spin { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.12); border-top-color: currentColor; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes shim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @keyframes stripe { 0% { background-position: 0 0; } 100% { background-position: 16px 0; } }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 720px) {
+    .topbar { padding: 12px 16px; }
+    .wrap { padding: 18px; }
+    .book-head { flex-direction: column; align-items: center; text-align: center; }
+    .book-info h1 { font-size: 22px; }
+    .book-actions { justify-content: center; }
+    .catalog-list { grid-template-columns: 1fr 1fr; }
+    .search-box { flex-wrap: wrap; }
+    .source-select { height: 46px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand" id="goHome" title="回到首页">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M19 2H6a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h13a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Zm-1 16H6a1 1 0 0 1 0-2h12Zm0-4H6a3 3 0 0 0-1 .18V5a1 1 0 0 1 1-1h12Z"/></svg>
+    </div>
+    <div>
+      <h1>笔趣阁 · 在线小说</h1>
+      <small>纯净阅读 · 无广告</small>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="btn btn-sm" id="tasksBtn">下载任务 <span class="badge" id="taskBadge">0</span></button>
+    <button class="btn btn-sm" id="refreshJs" title="站点改版后重新抓取前端 JS">刷新站点 JS</button>
+  </div>
+</header>
+
+<!-- 首页 -->
+<main id="viewHome" class="view active">
+  <div class="wrap">
+    <div class="hero">
+      <h2>搜索你喜欢的 <span>网络小说</span></h2>
+      <p>输入书名或作者，在线阅读 / 一键下载全本 TXT</p>
+      <div class="search-box">
+        <select id="source" class="source-select" title="切换来源">
+          <option value="bqg713">笔趣阁713</option>
+          <option value="biquge5">笔趣阁5（阅读推荐）</option>
+        </select>
+        <div class="search-field">
+          <input id="q" type="search" placeholder="搜索书名 / 作者，回车开始" autocomplete="off" />
+          <button class="btn btn-primary btn-sm" id="searchBtn">搜索</button>
+        </div>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="section-title">
+      <h3 id="resTitle">热门推荐</h3>
+      <span class="count" id="resCount"></span>
+    </div>
+    <div id="results" class="grid"></div>
+
+    <div class="foot">仅供个人学习使用 · 请尊重著作权</div>
+  </div>
+</main>
+
+<!-- 书籍详情 -->
+<section id="viewDetail" class="view">
+  <div class="detail-wrap">
+    <div class="back-row">
+      <button class="btn btn-ghost btn-sm" data-back="home">← 返回搜索</button>
+      <span class="crumb" id="detailCrumb"></span>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</section>
+
+<!-- 阅读器 -->
+<section id="viewReader" class="view reader theme-light">
+  <header class="reader-bar">
+    <button class="rb-btn" id="rbBack" title="返回书籍详情">←</button>
+    <div class="rb-title">
+      <div class="rb-book" id="rbBook"></div>
+      <div class="rb-ch" id="rbCh"></div>
+    </div>
+    <button class="rb-btn text" id="rbCatalog" title="目录">目录</button>
+    <button class="rb-btn text" id="rbSettings" title="阅读设置">Aa</button>
+  </header>
+  <div class="reader-progress"><i id="readerProg"></i></div>
+  <div class="reader-scroll" id="readerScroll">
+    <article class="reader-content" id="readerContent"></article>
+  </div>
+  <nav class="reader-nav">
+    <button class="btn" id="rbPrev">上一章</button>
+    <button class="btn btn-primary" id="rbNext">下一章</button>
+  </nav>
+</section>
+
+<!-- 遮罩 -->
+<div class="drawer-mask" id="drawerMask"></div>
+
+<!-- 阅读器目录抽屉 -->
+<aside class="drawer left chapter" id="catalogDrawer">
+  <div class="drawer-head">
+    <h3>目录</h3>
+    <input id="catFilter" type="search" placeholder="搜索章节…" autocomplete="off" />
+    <button class="drawer-close" data-close="catalogDrawer">✕</button>
+  </div>
+  <div class="drawer-body"><div class="reader-cat" id="catalogList"></div></div>
+</aside>
+
+<!-- 阅读设置抽屉 -->
+<aside class="drawer right" id="settingsDrawer">
+  <div class="drawer-head">
+    <h3>阅读设置</h3>
+    <button class="drawer-close" data-close="settingsDrawer">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="set-group">
+      <label>字号</label>
+      <div class="set-row size-bar">
+        <button class="set-opt" id="fsMinus">A-</button>
+        <input type="range" id="fsRange" min="14" max="28" step="1" value="18">
+        <button class="set-opt" id="fsPlus">A+</button>
+        <span class="size-val" id="fsVal">18</span>
+      </div>
+    </div>
+    <div class="set-group">
+      <label>行距</label>
+      <div class="set-row">
+        <button class="set-opt" data-lh="1.6">紧凑</button>
+        <button class="set-opt" data-lh="1.9">舒适</button>
+        <button class="set-opt" data-lh="2.2">宽松</button>
+      </div>
+    </div>
+    <div class="set-group">
+      <label>字体</label>
+      <div class="set-row">
+        <button class="set-opt song" data-ff="song">宋体</button>
+        <button class="set-opt hei" data-ff="hei">黑体</button>
+        <button class="set-opt kai" data-ff="kai">楷体</button>
+      </div>
+    </div>
+    <div class="set-group">
+      <label>主题</label>
+      <div class="set-row">
+        <button class="set-opt" data-theme="light">浅色</button>
+        <button class="set-opt" data-theme="sepia">羊皮纸</button>
+        <button class="set-opt" data-theme="green">护眼绿</button>
+        <button class="set-opt" data-theme="dark">夜间</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- 下载任务抽屉 -->
+<aside class="drawer right" id="tasksDrawer">
+  <div class="drawer-head">
+    <h3>下载任务</h3>
+    <button class="drawer-close" data-close="tasksDrawer">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div id="taskList" class="task-list"></div>
+    <div id="taskEmpty" class="tasks-empty">暂无下载任务</div>
+  </div>
+</aside>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+const API = location.origin;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+const state = {
+  view: 'home',
+  bookUrl: '',      // 当前书籍 biquge5 链接
+  book: null,       // 详情
+  reading: [],      // 阅读目录
+  curIdx: -1,       // 当前章节在 reading 中的下标
+  prevTail: null,   // 上一章结尾段落（用于章节边界去重）
+  prevTailIdx: -1,  // prevTail 对应的章节下标
+  tasks: new Map(),
+  sse: new Map(),
+};
+
+// 阅读设置
+const SET_KEY = 'reader:settings';
+const FONT_FAMILIES = { song: '"Songti SC","SimSun",serif', hei: '"Microsoft YaHei","PingFang SC",sans-serif', kai: '"KaiTi","STKaiti",serif' };
+let settings = { fs: 18, lh: 1.9, ff: 'song', theme: 'light' };
+
+// ---- 工具 ----
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(() => el.remove(), 300); }, 3200);
+}
+const esc = s => (s == null ? '' : String(s)).replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c]));
+
+function showView(name) {
+  state.view = name;
+  ['viewHome', 'viewDetail', 'viewReader'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('active', id === 'viewHome' && name === 'home' || id === 'viewDetail' && name === 'detail' || id === 'viewReader' && name === 'reader');
+  });
+  if (name !== 'reader') { closeDrawers(); document.body.style.overflow = ''; }
+  if (name === 'reader') document.body.style.overflow = 'hidden';
+  else document.body.style.overflow = '';
+  window.scrollTo(0, 0);
+}
+
+// ---- 抽屉 ----
+function openDrawer(id) {
+  document.getElementById(id).classList.add('open');
+  $('#drawerMask').classList.add('open');
+}
+function closeDrawers() {
+  $$('.drawer').forEach(d => d.classList.remove('open'));
+  $('#drawerMask').classList.remove('open');
+}
+
+// ---- 首页：搜索 ----
+async function doSearch(kw) {
+  const results = $('#results');
+  $('#resTitle').textContent = '搜索中…';
+  $('#resCount').textContent = '';
+  results.innerHTML = Array.from({length:6}).map(() => '<div class="skeleton-card"></div>').join('');
+  const source = $('#source').value;
+  const api = source === 'biquge5' ? `${API}/api/search/bq5` : `${API}/api/search`;
+  try {
+    const r = await fetch(`${api}?q=${encodeURIComponent(kw)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '搜索失败');
+    renderResults(d.data || [], `“${kw}” 的搜索结果`, source);
+  } catch (e) {
+    results.innerHTML = `<div class="empty"><div class="big">!</div><p>${esc(e.message)}</p></div>`;
+    $('#resTitle').textContent = '搜索失败';
+  }
+}
+
+function renderResults(list, title, source = 'bqg713') {
+  const results = $('#results');
+  $('#resTitle').textContent = title || '搜索结果';
+  $('#resCount').textContent = list.length ? `${list.length} 本` : '';
+  if (!list.length) {
+    results.innerHTML = '<div class="empty"><div class="big">∅</div><p>没有找到相关书籍</p></div>';
+    return;
+  }
+  const isBq5 = source === 'biquge5';
+  results.innerHTML = list.map((b, i) => {
+    const cover = isBq5 ? (b.cover || '') : coverUrl(b.id);
+    const sub = isBq5
+      ? `${esc(b.author || '')} · ${esc(b.status || '')}`
+      : `${esc(b.author || '')} · ID ${esc(b.id || '')}`;
+    const ph = esc((b.title || '书')[0]);
+    const readBtn = isBq5
+      ? `<button class="btn btn-primary btn-sm" data-action="read" data-url="${esc(b.url)}" data-title="${esc(b.title)}">在线阅读</button>`
+      : `<button class="btn btn-sm" data-action="read" data-kw="${esc(b.title)}" data-source="bqg713">在线阅读</button>`;
+    const dlBtn = isBq5
+      ? `<button class="btn btn-sm" data-action="download" data-source="bq5" data-url="${esc(b.url)}" data-title="${esc(b.title)}">下载全本</button>`
+      : `<button class="btn btn-sm" data-action="download" data-source="bqg713" data-id="${Number(b.id)}" data-title="${esc(b.title)}">下载全本</button>`;
+    return `
+    <div class="card ${isBq5 ? 'clickable' : ''}" ${isBq5 ? `data-action="open" data-url="${esc(b.url)}" data-title="${esc(b.title)}"` : ''} style="animation-delay:${i * 0.04}s">
+      <div class="cover">${cover ? `<img loading="lazy" src="${cover}" onerror="this.parentNode.innerHTML='<span class=&quot;ph&quot;>${ph}</span>'">` : `<span class="ph">${ph}</span>`}</div>
+      <div class="meta">
+        <div class="t" title="${esc(b.title)}">${esc(b.title)}</div>
+        <div class="a">${sub}</div>
+        <div class="intro">${esc(b.intro || '暂无简介')}</div>
+        <div class="act">${readBtn}${dlBtn}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// bqg713 书籍无法直接阅读（数据污染），按书名去笔趣阁5换源阅读
+async function openDetailByTitle(kw) {
+  if (!kw) return;
+  toast('正在笔趣阁5中查找《' + kw + '》…');
+  try {
+    const r = await fetch(`${API}/api/search/bq5?q=${encodeURIComponent(kw)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    const list = d.data || [];
+    const hit = list.find(b => b.title && b.title.indexOf(kw) !== -1) || list[0];
+    if (!hit) { toast('该书籍在笔趣阁5未找到，可切换搜索源后重试', 'err'); return; }
+    openDetail(hit.url, hit.title);
+  } catch (e) {
+    toast('换源查找失败：' + e.message, 'err');
+  }
+}
+
+// ---- 详情页 ----
+async function openDetail(url, title) {
+  state.bookUrl = url;
+  showView('detail');
+  $('#detailCrumb').textContent = title || '';
+  $('#detailBody').innerHTML = '<div class="empty"><div class="spin" style="margin:0 auto"></div><p>正在加载书籍信息…</p></div>';
+  try {
+    const r = await fetch(`${API}/api/book/bq5?url=${encodeURIComponent(url)}`);
+    const book = await r.json();
+    if (!r.ok) throw new Error(book.error || '加载失败');
+    state.book = book;
+    state.reading = book.reading || [];
+    renderDetail(book);
+  } catch (e) {
+    $('#detailBody').innerHTML = `<div class="empty"><div class="big">!</div><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderDetail(book) {
+  const saved = loadProgress(state.bookUrl || book.url);
+  const ph = esc((book.title || '书')[0]);
+  const missingNote = book.missing && book.missing.length
+    ? `<span class="tag">源站缺失 ${book.missing.length} 章</span>` : '';
+  const cont = saved && saved.idx >= 0 && saved.idx < state.reading.length
+    ? `<button class="btn btn-primary" data-action="resume">继续阅读 · ${esc(state.reading[saved.idx].title.slice(0, 22))}</button>`
+    : `<button class="btn btn-primary" data-action="start">开始阅读</button>`;
+  $('#detailBody').innerHTML = `
+    <div class="book-head">
+      <div class="book-cover">${book.cover ? `<img src="${book.cover}" onerror="this.parentNode.innerHTML='${ph}'">` : ph}</div>
+      <div class="book-info">
+        <h1>${esc(book.title)}</h1>
+        <div class="book-tags">
+          <span class="tag">作者：${esc(book.author || '未知')}</span>
+          ${book.status ? `<span class="tag status">${esc(book.status)}</span>` : ''}
+          <span class="tag">共 ${state.reading.length} 章</span>
+          ${book.lastUpdate ? `<span class="tag">更新：${esc(book.lastUpdate)}</span>` : ''}
+          ${missingNote}
+        </div>
+        <div class="book-intro" title="${esc(book.intro || '')}">${esc(book.intro || '暂无简介')}</div>
+        <div class="book-actions">
+          ${cont}
+          <button class="btn" data-action="download" data-source="bq5" data-url="${esc(book.url)}" data-title="${esc(book.title)}">下载全本</button>
+        </div>
+      </div>
+    </div>
+    <div class="catalog-panel">
+      <div class="catalog-head">
+        <h3>章节目录</h3>
+        <span class="note">点击章节开始阅读</span>
+        <div class="catalog-search">
+          <input id="detailCatFilter" type="search" placeholder="搜索章节标题 / 编号…" autocomplete="off" />
+        </div>
+      </div>
+      <div class="catalog-list" id="detailCatalog"></div>
+    </div>`;
+  renderCatalog(state.reading, $('#detailCatalog'));
+  $('#detailCatFilter').addEventListener('input', e => renderCatalog(state.reading, $('#detailCatalog'), e.target.value.trim()));
+}
+
+function renderCatalog(list, container, kw = '') {
+  const items = kw
+    ? list.filter(c => c.title.indexOf(kw) !== -1 || String(c.num) === kw)
+    : list;
+  container.innerHTML = items.map(c => {
+    const missing = state.book && state.book.missing && state.book.missing.includes(c.num);
+    return `<div class="cat-item" data-idx="${state.reading.indexOf(c)}" data-url="${esc(c.hrefs.join(','))}">
+      <span class="no">${c.num}</span><span class="ti">${esc(c.title)}${missing ? '（缺失）' : ''}</span></div>`;
+  }).join('');
+}
+
+// ---- 阅读器 ----
+function saveProgress(idx) {
+  try {
+    localStorage.setItem('read:' + state.bookUrl, JSON.stringify({
+      idx, title: (state.reading[idx] || {}).title || '', top: 0, t: Date.now(),
+    }));
+  } catch {}
+}
+function loadProgress(url) {
+  try { return JSON.parse(localStorage.getItem('read:' + url)) || null; } catch { return null; }
+}
+
+function openReader(idx) {
+  if (!state.reading.length) return;
+  idx = Math.max(0, Math.min(state.reading.length - 1, idx));
+  // 仅顺序翻页时保留上一章结尾用于边界去重；跳转/回到上次进度时清空
+  if (idx !== state.prevTailIdx + 1) { state.prevTail = null; state.prevTailIdx = -1; }
+  state.curIdx = idx;
+  showView('reader');
+  renderReaderShell();
+  loadChapter(idx);
+  saveProgress(idx);
+}
+
+function renderReaderShell() {
+  const ch = state.reading[state.curIdx];
+  $('#rbBook').textContent = state.book ? state.book.title : '';
+  $('#rbCh').textContent = ch ? ch.title : '';
+  $('#readerProg').style.width = ((state.curIdx + 1) / state.reading.length * 100) + '%';
+  $('#rbPrev').disabled = state.curIdx <= 0;
+  $('#rbNext').disabled = state.curIdx >= state.reading.length - 1;
+}
+
+// 章节加载竞态守卫：只接受最新一次请求的结果（防止快速翻页时旧请求覆盖新章）
+let _chapterReq = 0;
+
+async function loadChapter(idx) {
+  const ch = state.reading[idx];
+  if (!ch) return;
+  const req = ++_chapterReq;
+  renderReaderShell();
+  const box = $('#readerContent');
+  box.innerHTML = `<div class="reader-loading"><span class="spin"></span><p style="margin-top:12px">正在加载：${esc(ch.title)}</p></div>`;
+  $('#readerScroll').scrollTop = 0;
+  try {
+    const r = await fetch(`${API}/api/chapter/bq5?url=${encodeURIComponent(ch.hrefs.join(','))}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '加载失败');
+    if (d.error) throw new Error(d.error);
+    if (req !== _chapterReq) return; // 用户已翻到别章，丢弃过期结果
+    // 章节标题：去掉源站拼接的 "-《书名》" 尾巴
+    const title = (d.title || ch.title || '').replace(/-《[^》]*》\s*$/, '').trim() || ch.title;
+    let paras = d.txt.split(/\n+/).filter(Boolean);
+    // 章节边界去重：顺序翻页时，去掉与上一章结尾重复的段落（源站章节切分会重叠数段）
+    if (state.prevTail && state.prevTail.length && idx === state.prevTailIdx + 1) {
+      const max = Math.min(4, state.prevTail.length, paras.length);
+      let cut = 0;
+      for (let k = 0; k < max; k++) if (state.prevTail[k] === paras[k]) cut = k + 1; else break;
+      if (cut) paras = paras.slice(cut);
+    }
+    box.innerHTML = `<h1>${esc(title)}</h1>` + paras.map(p => `<p>${esc(p)}</p>`).join('');
+    // 记录本章结尾段落，供下一章边界去重
+    state.prevTail = paras.slice(-3);
+    state.prevTailIdx = idx;
+    // 恢复到上次阅读位置
+    const saved = loadProgress(state.bookUrl);
+    if (saved && saved.idx === idx && saved.top > 0) {
+      $('#readerScroll').scrollTop = saved.top;
+    } else {
+      $('#readerScroll').scrollTop = 0;
+    }
+    // 预热下一章（后台缓存，翻页更顺滑）
+    if (idx + 1 < state.reading.length) {
+      const nxt = state.reading[idx + 1];
+      fetch(`${API}/api/chapter/bq5?url=${encodeURIComponent(nxt.hrefs.join(','))}`).catch(() => {});
+    }
+  } catch (e) {
+    if (req !== _chapterReq) return;
+    box.innerHTML = `<div class="reader-err"><div>加载失败：${esc(e.message)}</div><button class="btn" id="retryCh">重试</button></div>`;
+    $('#retryCh').addEventListener('click', () => loadChapter(idx));
+  }
+}
+
+function goChapter(delta) {
+  const idx = state.curIdx + delta;
+  if (idx < 0 || idx >= state.reading.length) return;
+  openReader(idx);
+}
+
+// 阅读进度记忆（滚动节流）
+let _scrollTimer = 0;
+$('#readerScroll').addEventListener('scroll', () => {
+  if (state.view !== 'reader') return;
+  clearTimeout(_scrollTimer);
+  _scrollTimer = setTimeout(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('read:' + state.bookUrl) || '{}');
+      p.idx = state.curIdx; p.top = $('#readerScroll').scrollTop;
+      localStorage.setItem('read:' + state.bookUrl, JSON.stringify(p));
+    } catch {}
+  }, 400);
+});
+
+// 阅读器目录
+function openReaderCatalog() {
+  const cur = state.curIdx;
+  const box = $('#catalogList');
+  box.innerHTML = state.reading.map((c, i) => {
+    const missing = state.book && state.book.missing && state.book.missing.includes(c.num);
+    return `<div class="rc ${i === cur ? 'cur' : ''} ${missing ? 'miss' : ''}" data-idx="${i}" ${missing ? '' : `data-url="${esc(c.hrefs.join(','))}"`}>${esc(c.title)}${missing ? '（缺失）' : ''}</div>`;
+  }).join('');
+  openDrawer('catalogDrawer');
+  $('#catFilter').value = '';
+  const el = box.querySelector('.rc.cur');
+  if (el) el.scrollIntoView({ block: 'center' });
+}
+function applyCatFilter(kw) {
+  const box = $('#catalogList');
+  $$('.rc', box).forEach(el => {
+    const c = state.reading[Number(el.dataset.idx)];
+    const ok = !kw || (c && c.title.indexOf(kw) !== -1 || String(c.num) === kw);
+    el.style.display = ok ? '' : 'none';
+  });
+}
+
+// ---- 阅读设置 ----
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SET_KEY)) || {};
+    settings = Object.assign(settings, s);
+  } catch {}
+  applySettings();
+}
+function saveSettings() { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch {} }
+function applySettings() {
+  const r = $('#viewReader');
+  r.classList.remove('theme-light', 'theme-sepia', 'theme-green', 'theme-dark');
+  r.classList.add('theme-' + settings.theme);
+  const c = $('#readerContent');
+  c.style.setProperty('--r-fs', settings.fs + 'px');
+  c.style.setProperty('--r-lh', settings.lh);
+  c.style.setProperty('--r-ff', FONT_FAMILIES[settings.ff]);
+  $('#fsRange').value = settings.fs;
+  $('#fsVal').textContent = settings.fs;
+  // 高亮当前选项
+  $$('[data-lh]').forEach(b => b.classList.toggle('on', Number(b.dataset.lh) === settings.lh));
+  $$('[data-ff]').forEach(b => b.classList.toggle('on', b.dataset.ff === settings.ff));
+  $$('[data-theme]').forEach(b => b.classList.toggle('on', b.dataset.theme === settings.theme));
+}
+
+// ---- 下载任务 ----
+async function startDownload(id, title) {
+  [...state.tasks.keys()].forEach(tid => rmTask(tid));
+  toast(`开始下载：${title || id}`);
+  const tmpId = 'pending_' + Date.now();
+  state.tasks.set(tmpId, { taskId: tmpId, bookId: String(id), title: title || String(id), author: '', total: 0, to: 0, done: 0, pct: 0, status: 'pending', speed: 0, eta: 0, failedCount: 0, fileName: '' });
+  renderTask(state.tasks.get(tmpId));
+  openDrawer('tasksDrawer');
+  try {
+    const r = await fetch(`${API}/api/download`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, concurrency: 6 })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '启动失败');
+    rmTask(tmpId);
+    state.tasks.set(d.taskId, { taskId: d.taskId, bookId: String(id), title: title || String(id), author: '', total: 0, to: 0, done: 0, pct: 0, status: 'pending', speed: 0, eta: 0, failedCount: 0, fileName: '' });
+    renderTask(state.tasks.get(d.taskId));
+    connectSSE(d.taskId);
+  } catch (e) {
+    rmTask(tmpId);
+    toast('下载失败：' + e.message, 'err');
+  }
+}
+
+async function startBq5Download(url, title) {
+  [...state.tasks.keys()].forEach(tid => rmTask(tid));
+  toast(`开始下载（笔趣阁5）：${title || url}`);
+  const tmpId = 'pending_' + Date.now();
+  state.tasks.set(tmpId, { taskId: tmpId, bookId: url, title: title || '正在解析…', author: '', total: 0, to: 0, done: 0, pct: 0, status: 'pending', speed: 0, eta: 0, failedCount: 0, missingCount: 0, fileName: '' });
+  renderTask(state.tasks.get(tmpId));
+  openDrawer('tasksDrawer');
+  try {
+    const r = await fetch(`${API}/api/download/bq5`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, concurrency: 4 })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '启动失败');
+    rmTask(tmpId);
+    state.tasks.set(d.taskId, { taskId: d.taskId, bookId: url, title: title || '正在解析…', author: '', total: 0, to: 0, done: 0, pct: 0, status: 'pending', speed: 0, eta: 0, failedCount: 0, missingCount: 0, fileName: '' });
+    renderTask(state.tasks.get(d.taskId));
+    connectSSE(d.taskId);
+  } catch (e) {
+    rmTask(tmpId);
+    toast('下载失败：' + e.message, 'err');
+  }
+}
+
+function connectSSE(taskId) {
+  if (state.sse.get(taskId)) return;
+  const es = new EventSource(`${API}/api/progress/${taskId}`);
+  state.sse.set(taskId, es);
+  es.onmessage = (ev) => {
+    const s = JSON.parse(ev.data);
+    state.tasks.set(taskId, s);
+    renderTask(s);
+    if (['done','error','cancelled'].includes(s.status)) {
+      setTimeout(() => { es.close(); state.sse.delete(taskId); }, 800);
+      if (s.status === 'done') toast(`下载完成：${s.title}`, 'ok');
+      if (s.status === 'error') toast(`出错：${s.error}`, 'err');
+    }
+  };
+  es.onerror = () => {
+    const s = state.tasks.get(taskId);
+    if (s && ['done', 'error', 'cancelled'].includes(s.status)) { es.close(); state.sse.delete(taskId); }
+  };
+}
+
+function renderTask(s) {
+  const list = $('#taskList');
+  $('#taskEmpty').style.display = state.tasks.size ? 'none' : '';
+  $('#taskBadge').textContent = state.tasks.size;
+  let el = $(`#task-${s.taskId}`);
+  const html = taskHtml(s);
+  if (el) { el.innerHTML = html; }
+  else { list.insertAdjacentHTML('afterbegin', `<div id="task-${s.taskId}" class="task">${html}</div>`); }
+}
+function taskHtml(s) {
+  const tag = { running:['run','运行中'], done:['done','已完成'], error:['err','失败'], cancelled:['cxl','已取消'], pending:['run','等待中'] }[s.status] || ['run', s.status];
+  const done = s.status === 'done';
+  const canStop = s.status === 'running' || s.status === 'pending';
+  return `
+    <div class="tt" title="${esc(s.title)}">${esc(s.title || s.bookId)}</div>
+    <div class="ss">${esc(s.author||'')} · 共 ${s.total} 章 · ${s.fileName||'—'}</div>
+    <div class="bar ${s.status==='running'?'run':''}"><i style="width:${s.pct}%"></i></div>
+    <div class="stat">
+      <span><span class="t-tag ${tag[0]}">${tag[1]}</span> ${s.done}/${s.total}</span>
+      <span>${s.pct}% ${s.status==='running' ? `· ${s.speed}章/s · ETA ${s.eta}s` : ''}</span>
+    </div>
+    ${s.failedCount ? `<div class="ss" style="color:var(--warn)">⚠ ${s.failedCount} 章失败，可重新下载续传</div>`:''}
+    ${s.missingCount ? `<div class="ss" style="color:var(--warn)">⚠ 源站缺失章节：${esc((s.missing||[]).join('、'))}</div>`:''}
+    <div class="ops">
+      ${done && s.fileName ? `<a class="btn btn-sm btn-primary" href="${API}/api/file/${s.taskId}" download>保存文件</a>` : ''}
+      ${canStop ? `<button class="btn btn-sm btn-danger" data-action="cancel" data-tid="${s.taskId}">取消</button>` : ''}
+      <button class="btn btn-sm btn-ghost" data-action="rmtask" data-tid="${s.taskId}">移除</button>
+    </div>`;
+}
+async function cancelTask(tid) {
+  await fetch(`${API}/api/cancel/${tid}`, { method: 'POST' });
+}
+function rmTask(tid) {
+  const el = $(`#task-${tid}`); if (el) el.remove();
+  state.tasks.delete(tid);
+  $('#taskEmpty').style.display = state.tasks.size ? 'none' : '';
+  $('#taskBadge').textContent = state.tasks.size;
+}
+
+// ---- 封面 ----
+function coverUrl(id) {
+  id = Number(id);
+  return `https://www.bqg713.cc/bookimg/${Math.floor(id / 1000)}/${id}.jpg`;
+}
+
+// ---- 热门 ----
+async function loadHot() {
+  try {
+    const r = await fetch(`https://apibi.cc/api/index?sort=index`);
+    const d = await r.json();
+    const hot = (d.hotlist || []).slice(0, 12);
+    if (hot.length) renderResults(hot, '热门推荐');
+    const words = (d.toplist || []).slice(0, 6).map(x => x.title);
+    $('#chips').innerHTML = words.map(w => `<span class="chip" data-kw="${esc(w)}">${esc(w)}</span>`).join('');
+  } catch {}
+}
+
+// ---- 初始化 ----
+function init() {
+  loadSettings();
+
+  // 首页搜索
+  $('#q').addEventListener('keydown', e => { if (e.key === 'Enter') triggerSearch(); });
+  $('#searchBtn').addEventListener('click', triggerSearch);
+  $('#chips').addEventListener('click', e => {
+    if (e.target.classList.contains('chip')) { $('#q').value = e.target.dataset.kw; triggerSearch(); }
+  });
+
+  // 首页结果事件委托
+  $('#results').addEventListener('click', e => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const action = el.dataset.action;
+    if (action === 'download') {
+      if (el.dataset.source === 'bq5') startBq5Download(el.dataset.url, el.dataset.title);
+      else startDownload(el.dataset.id, el.dataset.title);
+      return;
+    }
+    if (action === 'read') {
+      if (el.dataset.source === 'bqg713') openDetailByTitle(el.dataset.kw);
+      else openDetail(el.dataset.url, el.dataset.title);
+      return;
+    }
+    if (action === 'open') openDetail(el.dataset.url, el.dataset.title);
+  });
+
+  // 详情页事件委托（含动态目录，容器 #detailBody 静态存在）
+  $('#detailBody').addEventListener('click', e => {
+    const item = e.target.closest('.cat-item');
+    if (item) {
+      const missing = state.book && state.book.missing && state.book.missing.includes(Number($$('.no', item)[0].textContent));
+      if (missing) return;
+      openReader(Number(item.dataset.idx));
+      return;
+    }
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const action = el.dataset.action;
+    if (action === 'start') openReader(0);
+    if (action === 'resume') {
+      const saved = loadProgress(state.bookUrl);
+      openReader(saved && saved.idx >= 0 ? saved.idx : 0);
+    }
+    if (action === 'download') startBq5Download(el.dataset.url, el.dataset.title);
+  });
+
+  // 返回
+  $$('[data-back]').forEach(b => b.addEventListener('click', () => showView(b.dataset.back)));
+  $('#goHome').addEventListener('click', () => { showView('home'); });
+
+  // 阅读器控制
+  $('#rbBack').addEventListener('click', () => { if (state.bookUrl) openDetail(state.bookUrl, state.book ? state.book.title : ''); });
+  $('#rbPrev').addEventListener('click', () => goChapter(-1));
+  $('#rbNext').addEventListener('click', () => goChapter(1));
+  $('#rbCatalog').addEventListener('click', openReaderCatalog);
+  $('#rbSettings').addEventListener('click', () => { applySettings(); openDrawer('settingsDrawer'); });
+  $('#catFilter').addEventListener('input', e => applyCatFilter(e.target.value.trim()));
+  $('#catalogList').addEventListener('click', e => {
+    const el = e.target.closest('.rc');
+    if (!el || !el.dataset.url) return;
+    openReader(Number(el.dataset.idx));
+    closeDrawers();
+  });
+
+  // 阅读设置交互
+  $('#fsMinus').addEventListener('click', () => { settings.fs = Math.max(14, settings.fs - 1); saveSettings(); applySettings(); });
+  $('#fsPlus').addEventListener('click', () => { settings.fs = Math.min(28, settings.fs + 1); saveSettings(); applySettings(); });
+  $('#fsRange').addEventListener('input', e => { settings.fs = Number(e.target.value); saveSettings(); applySettings(); });
+  $('#settingsDrawer').addEventListener('click', e => {
+    const b = e.target.closest('[data-lh],[data-ff],[data-theme]');
+    if (!b) return;
+    if (b.dataset.lh) settings.lh = Number(b.dataset.lh);
+    if (b.dataset.ff) settings.ff = b.dataset.ff;
+    if (b.dataset.theme) settings.theme = b.dataset.theme;
+    saveSettings(); applySettings();
+  });
+
+  // 抽屉
+  $('#drawerMask').addEventListener('click', closeDrawers);
+  $$('[data-close]').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.close).classList.remove('open'), { once: true }));
+  $$('[data-close]').forEach(b => b.addEventListener('click', () => {
+    document.getElementById(b.dataset.close).classList.remove('open');
+    $('#drawerMask').classList.remove('open');
+  }));
+  $('#tasksBtn').addEventListener('click', () => openDrawer('tasksDrawer'));
+
+  // 任务抽屉事件委托
+  $('#taskList').addEventListener('click', e => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    if (el.dataset.action === 'cancel') cancelTask(el.dataset.tid);
+    if (el.dataset.action === 'rmtask') rmTask(el.dataset.tid);
+  });
+
+  // 刷新站点 JS
+  $('#refreshJs').addEventListener('click', async (e) => {
+    e.target.disabled = true; e.target.textContent = '刷新中…';
+    try {
+      const r = await fetch(`${API}/api/refresh-js`, { method: 'POST' });
+      const d = await r.json();
+      if (r.ok) toast('站点 JS 刷新成功', 'ok'); else throw new Error(d.error);
+    } catch (err) { toast('刷新失败：' + err.message, 'err'); }
+    e.target.disabled = false; e.target.textContent = '刷新站点 JS';
+  });
+
+  // 阅读器键盘导航
+  document.addEventListener('keydown', e => {
+    if (state.view !== 'reader') return;
+    const typing = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+    if (typing) return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goChapter(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); goChapter(1); }
+    if (e.key === 'Escape') closeDrawers();
+  });
+
+  // 热门推荐
+  loadHot();
+
+  // 恢复活跃下载任务
+  try {
+    fetch(`${API}/api/downloads`).then(r => r.json()).then(d => {
+      (d.data || []).filter(s => ['running', 'pending'].includes(s.status)).forEach(s => {
+        state.tasks.set(s.taskId, s); renderTask(s); if (s.status==='running') connectSSE(s.taskId);
+      });
+    });
+  } catch {}
+}
+
+function triggerSearch() {
+  const kw = $('#q').value.trim();
+  if (kw) doSearch(kw);
+}
+
+init();
+</script>
+</body>
+</html>
