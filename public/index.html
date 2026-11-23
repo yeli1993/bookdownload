@@ -664,7 +664,10 @@ async function openDetailByTitle(kw) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error);
     const list = d.data || [];
-    const hit = list.find(b => b.title && b.title.indexOf(kw) !== -1) || list[0];
+    // 书名必须与关键词完全一致（防止《兽血沸腾2》抢占《兽血沸腾》）；其次回退到包含匹配
+    const hit = list.find(b => (b.title || '').trim() === kw)
+      || list.find(b => b.title && b.title.indexOf(kw) !== -1)
+      || list[0];
     if (!hit) { toast('该书籍在笔趣阁5未找到，可切换搜索源后重试', 'err'); return; }
     openDetail(hit.url, hit.title);
   } catch (e) {
@@ -736,7 +739,8 @@ function renderCatalog(list, container, kw = '') {
     ? list.filter(c => c.title.indexOf(kw) !== -1 || String(c.num) === kw)
     : list;
   container.innerHTML = items.map(c => {
-    const missing = state.book && state.book.missing && state.book.missing.includes(c.num);
+    // 缺失标记由后端按原始编号判定（c.num 已被连续重编，不能直接与 missing 数组比对）
+    const missing = !!c.missing;
     return `<div class="cat-item" data-idx="${state.reading.indexOf(c)}" data-url="${esc(c.hrefs.join(','))}">
       <span class="no">${c.num}</span><span class="ti">${esc(c.title)}${missing ? '（缺失）' : ''}</span></div>`;
   }).join('');
@@ -850,7 +854,7 @@ function openReaderCatalog() {
   const cur = state.curIdx;
   const box = $('#catalogList');
   box.innerHTML = state.reading.map((c, i) => {
-    const missing = state.book && state.book.missing && state.book.missing.includes(c.num);
+    const missing = !!c.missing;
     return `<div class="rc ${i === cur ? 'cur' : ''} ${missing ? 'miss' : ''}" data-idx="${i}" ${missing ? '' : `data-url="${esc(c.hrefs.join(','))}"`}>${esc(c.title)}${missing ? '（缺失）' : ''}</div>`;
   }).join('');
   openDrawer('catalogDrawer');
@@ -1051,8 +1055,8 @@ function init() {
   $('#detailBody').addEventListener('click', e => {
     const item = e.target.closest('.cat-item');
     if (item) {
-      const missing = state.book && state.book.missing && state.book.missing.includes(Number($$('.no', item)[0].textContent));
-      if (missing) return;
+      const c = state.reading[Number(item.dataset.idx)];
+      if (c && c.missing) return;   // 源站确实没有该章
       openReader(Number(item.dataset.idx));
       return;
     }
