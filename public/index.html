@@ -572,7 +572,8 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 const state = {
   view: 'home',
-  bookUrl: '',      // 当前书籍 biquge5 链接
+  bookUrl: '',      // 当前书籍标识（bq5 链接 或 main:<id>）
+  source: 'bq5',    // 当前阅读来源：bq5 | main
   book: null,       // 详情
   reading: [],      // 阅读目录
   curIdx: -1,       // 当前章节在 reading 中的下标
@@ -693,7 +694,7 @@ function renderResults(list, title, source = 'bqg713') {
     const ph = esc((b.title || '书')[0]);
     const readBtn = isBq5
       ? `<button class="btn btn-primary btn-sm" data-action="read" data-url="${esc(b.url)}" data-title="${esc(b.title)}">在线阅读</button>`
-      : `<button class="btn btn-sm" data-action="read" data-kw="${esc(b.title)}" data-source="bqg713">在线阅读</button>`;
+      : `<button class="btn btn-sm" data-action="read" data-kw="${esc(b.title)}" data-id="${Number(b.id)}" data-source="bqg713">在线阅读</button>`;
     const dlBtn = isBq5
       ? `<button class="btn btn-sm" data-action="download" data-source="bq5" data-url="${esc(b.url)}" data-title="${esc(b.title)}">下载全本</button>`
       : `<button class="btn btn-sm" data-action="download" data-source="bqg713" data-id="${Number(b.id)}" data-title="${esc(b.title)}">下载全本</button>`;
@@ -710,8 +711,8 @@ function renderResults(list, title, source = 'bqg713') {
   }).join('');
 }
 
-// bqg713 书籍无法直接阅读（数据污染），按书名去笔趣阁5换源阅读
-async function openDetailByTitle(kw) {
+// bqg713 书籍优先换源到笔趣阁5阅读（源更干净）；笔趣阁5没有时回退主源直接阅读
+async function openDetailByTitle(kw, id) {
   if (!kw) return;
   toast('正在笔趣阁5中查找《' + kw + '》…');
   try {
@@ -723,9 +724,13 @@ async function openDetailByTitle(kw) {
     const hit = list.find(b => (b.title || '').trim() === kw)
       || list.find(b => b.title && b.title.indexOf(kw) !== -1)
       || list[0];
-    if (!hit) { toast('该书籍在笔趣阁5未找到，可切换搜索源后重试', 'err'); return; }
-    openDetail(hit.url, hit.title);
+    if (hit) { openDetail(hit.url, hit.title); return; }
+    // 笔趣阁5 无此书 → 回退主源阅读
+    if (id) { toast('笔趣阁5 未收录，改用主源阅读', ''); openDetailMain(id); return; }
+    toast('该书籍在笔趣阁5未找到，可切换搜索源后重试', 'err');
   } catch (e) {
+    // 换源接口异常时同样回退主源
+    if (id) { toast('换源失败，改用主源阅读', ''); openDetailMain(id); return; }
     toast('换源查找失败：' + e.message, 'err');
   }
 }
@@ -733,6 +738,7 @@ async function openDetailByTitle(kw) {
 // ---- 详情页 ----
 async function openDetail(url, title) {
   state.bookUrl = url;
+  state.source = 'bq5';
   showView('detail');
   $('#detailCrumb').textContent = title || '';
   $('#detailBody').innerHTML = '<div class="empty"><div class="spin" style="margin:0 auto"></div><p>正在加载书籍信息…</p></div>';
@@ -742,6 +748,27 @@ async function openDetail(url, title) {
     if (!r.ok) throw new Error(book.error || '加载失败');
     state.book = book;
     state.reading = book.reading || [];
+    renderDetail(book);
+  } catch (e) {
+    $('#detailBody').innerHTML = `<div class="empty"><div class="big">!</div><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+// 主源（bqg713）详情页：笔趣阁5 无此书时使用
+async function openDetailMain(id) {
+  state.bookUrl = 'main:' + id;
+  state.source = 'main';
+  showView('detail');
+  $('#detailCrumb').textContent = '加载中…';
+  $('#detailBody').innerHTML = '<div class="empty"><div class="spin" style="margin:0 auto"></div><p>正在加载书籍信息…</p></div>';
+  try {
+    const r = await fetch(`${API}/api/catalog/${id}`);
+    const book = await r.json();
+    if (!r.ok) throw new Error(book.error || '加载失败');
+    state.book = book;
+    state.reading = book.reading || [];
+    state.bookUrl = 'main:' + id;
+    $('#detailCrumb').textContent = book.title || '';
     renderDetail(book);
   } catch (e) {
     $('#detailBody').innerHTML = `<div class="empty"><div class="big">!</div><p>${esc(e.message)}</p></div>`;
@@ -771,7 +798,9 @@ function renderDetail(book) {
         <div class="book-intro" title="${esc(book.intro || '')}">${esc(book.intro || '暂无简介')}</div>
         <div class="book-actions">
           ${cont}
-          <button class="btn" data-action="download" data-source="bq5" data-url="${esc(book.url)}" data-title="${esc(book.title)}">下载全本</button>
+          ${state.source === 'main'
+            ? `<button class="btn" data-action="download" data-source="bqg713" data-id="${esc(book.id)}" data-title="${esc(book.title)}">下载全本</button>`
+            : `<button class="btn" data-action="download" data-source="bq5" data-url="${esc(book.url)}" data-title="${esc(book.title)}">下载全本</button>`}
         </div>
       </div>
     </div>
@@ -796,7 +825,9 @@ function renderCatalog(list, container, kw = '') {
   container.innerHTML = items.map(c => {
     // 缺失标记由后端按原始编号判定（c.num 已被连续重编，不能直接与 missing 数组比对）
     const missing = !!c.missing;
-    return `<div class="cat-item" data-idx="${state.reading.indexOf(c)}" data-url="${esc(c.hrefs.join(','))}">
+    // 主源章节用 chapterid，bq5 用 hrefs
+    const url = c.hrefs ? c.hrefs.join(',') : '';
+    return `<div class="cat-item" data-idx="${state.reading.indexOf(c)}" data-url="${esc(url)}">
       <span class="no">${c.num}</span><span class="ti">${esc(c.title)}${missing ? '（缺失）' : ''}</span></div>`;
   }).join('');
 }
@@ -846,14 +877,17 @@ async function loadChapter(idx) {
   box.innerHTML = `<div class="reader-loading"><span class="spin"></span><p style="margin-top:12px">正在加载：${esc(ch.title)}</p></div>`;
   $('#readerScroll').scrollTop = 0;
   try {
-    const r = await fetch(`${API}/api/chapter/bq5?url=${encodeURIComponent(ch.hrefs.join(','))}`);
+    const url = state.source === 'main'
+      ? `${API}/api/chapter/${state.book.id}/${ch.chapterid}`
+      : `${API}/api/chapter/bq5?url=${encodeURIComponent(ch.hrefs.join(','))}`;
+    const r = await fetch(url);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || '加载失败');
     if (d.error) throw new Error(d.error);
     if (req !== _chapterReq) return; // 用户已翻到别章，丢弃过期结果
     // 章节标题：去掉源站拼接的 "-《书名》" 尾巴
     const title = (d.title || ch.title || '').replace(/-《[^》]*》\s*$/, '').trim() || ch.title;
-    let paras = d.txt.split(/\n+/).filter(Boolean);
+    let paras = (d.txt || '').split(/\n+/).filter(Boolean);
     // 章节边界去重：顺序翻页时，去掉与上一章结尾重复的段落（源站章节切分会重叠数段）
     if (state.prevTail && state.prevTail.length && idx === state.prevTailIdx + 1) {
       const max = Math.min(4, state.prevTail.length, paras.length);
@@ -875,7 +909,10 @@ async function loadChapter(idx) {
     // 预热下一章（后台缓存，翻页更顺滑）
     if (idx + 1 < state.reading.length) {
       const nxt = state.reading[idx + 1];
-      fetch(`${API}/api/chapter/bq5?url=${encodeURIComponent(nxt.hrefs.join(','))}`).catch(() => {});
+      const nurl = state.source === 'main'
+        ? `${API}/api/chapter/${state.book.id}/${nxt.chapterid}`
+        : `${API}/api/chapter/bq5?url=${encodeURIComponent(nxt.hrefs.join(','))}`;
+      fetch(nurl).catch(() => {});
     }
   } catch (e) {
     if (req !== _chapterReq) return;
@@ -910,7 +947,8 @@ function openReaderCatalog() {
   const box = $('#catalogList');
   box.innerHTML = state.reading.map((c, i) => {
     const missing = !!c.missing;
-    return `<div class="rc ${i === cur ? 'cur' : ''} ${missing ? 'miss' : ''}" data-idx="${i}" ${missing ? '' : `data-url="${esc(c.hrefs.join(','))}"`}>${esc(c.title)}${missing ? '（缺失）' : ''}</div>`;
+    const url = c.hrefs ? c.hrefs.join(',') : '';
+    return `<div class="rc ${i === cur ? 'cur' : ''} ${missing ? 'miss' : ''}" data-idx="${i}" ${missing ? '' : `data-url="${esc(url)}"`}>${esc(c.title)}${missing ? '（缺失）' : ''}</div>`;
   }).join('');
   openDrawer('catalogDrawer');
   $('#catFilter').value = '';
@@ -1109,7 +1147,7 @@ function init() {
       return;
     }
     if (action === 'read') {
-      if (el.dataset.source === 'bqg713') openDetailByTitle(el.dataset.kw);
+      if (el.dataset.source === 'bqg713') openDetailByTitle(el.dataset.kw, el.dataset.id);
       else openDetail(el.dataset.url, el.dataset.title);
       return;
     }
@@ -1133,7 +1171,10 @@ function init() {
       const saved = loadProgress(state.bookUrl);
       openReader(saved && saved.idx >= 0 ? saved.idx : 0);
     }
-    if (action === 'download') startBq5Download(el.dataset.url, el.dataset.title);
+    if (action === 'download') {
+      if (el.dataset.source === 'bq5') startBq5Download(el.dataset.url, el.dataset.title);
+      else startDownload(el.dataset.id, el.dataset.title);
+    }
   });
 
   // 返回
@@ -1149,7 +1190,9 @@ function init() {
   $('#catFilter').addEventListener('input', e => applyCatFilter(e.target.value.trim()));
   $('#catalogList').addEventListener('click', e => {
     const el = e.target.closest('.rc');
-    if (!el || !el.dataset.url) return;
+    if (!el) return;
+    // 主源章节没有 hrefs（用 chapterid），bq5 章节带 data-url
+    if (state.source !== 'main' && !el.dataset.url) return;
     openReader(Number(el.dataset.idx));
     closeDrawers();
   });

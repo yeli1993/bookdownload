@@ -22,7 +22,7 @@ const path = require('path');
 const { exec } = require('child_process');
 
 const core = require('./lib/core');
-const { searchBooks, getBookInfo, apiUrl, fetchChaptersViaBrowser, refreshJS, formatChapter, safeName, sleep, SITE } = core;
+const { searchBooks, getBookInfo, getBookList, getChapter, coverUrl, apiUrl, fetchChaptersViaBrowser, refreshJS, formatChapter, safeName, sleep, SITE } = core;
 const bq5 = require('./lib/bq5');
 
 const PORT = Number(process.argv[2]) || 5173;
@@ -434,6 +434,43 @@ const server = http.createServer(async (req, res) => {
     if (m1 && req.method === 'GET') {
       const info = await getBookInfo(m1[1]);
       return send(res, 200, info);
+    }
+
+    // 主源阅读目录：GET /api/catalog/:id  → { reading: [{num,title,chapterid}], ...info }
+    const mc = p.match(/^\/api\/catalog\/(\d+)$/);
+    if (mc && req.method === 'GET') {
+      const id = mc[1];
+      const data = await getBookCached('catalog:' + id, async () => {
+        const info = await getBookInfo(id);
+        const titles = await getBookList(id);
+        const total = Number(info.lastchapterid) || titles.length;
+        const reading = [];
+        for (let cid = 1; cid <= total; cid++) {
+          const title = titles[cid - 1];
+          if (!title) continue;   // 主源缺该章
+          reading.push({ num: cid, title, chapterid: cid });
+        }
+        return {
+          id: String(id), title: info.title, author: info.author,
+          status: info.full || '', intro: info.intro || '',
+          cover: coverUrl(id), lastUpdate: info.lastupdate || '',
+          total, reading, source: 'bqg713',
+        };
+      });
+      return send(res, 200, data);
+    }
+
+    // 主源章节正文（浏览器环境抓取，避免 apibi 污染）：GET /api/chapter/:id/:chapterid
+    const mch = p.match(/^\/api\/chapter\/(\d+)\/(\d+)$/);
+    if (mch && req.method === 'GET') {
+      const id = Number(mch[1]), cid = Number(mch[2]);
+      const data = await getChapterCached('main:' + id + ':' + cid, async () => {
+        const url = apiUrl('chapter', { id, chapterid: cid });
+        const [ch] = await fetchChaptersViaBrowser([url]);
+        if (!ch || ch.error) throw new Error((ch && ch.error) || '获取章节失败');
+        return { title: ch.chaptername || '', txt: ch.txt || '' };
+      });
+      return send(res, 200, data);
     }
 
     if (p === '/api/download' && req.method === 'POST') {
