@@ -133,6 +133,23 @@
   }
   .chip:hover { color: var(--txt-0); border-color: rgba(124,108,255,.4); }
 
+  /* 最近搜索 */
+  .chips.recent { margin-top: 10px; align-items: center; }
+  .chips.recent:empty { display: none; }
+  .chips-label { font-size: 12px; color: var(--txt-2); margin-right: 2px; }
+  .chip.recent-chip { display: inline-flex; align-items: center; gap: 6px; padding-right: 7px; }
+  .chip-del {
+    border: 0; background: transparent; color: var(--txt-2); cursor: pointer;
+    font-size: 13px; line-height: 1; padding: 2px 3px; border-radius: 50%;
+    transition: all .15s;
+  }
+  .chip-del:hover { color: var(--err); background: rgba(248,113,113,.12); }
+  .chips-clear {
+    font-size: 12px; color: var(--txt-2); background: none; border: 0;
+    cursor: pointer; padding: 6px 4px; transition: color .15s;
+  }
+  .chips-clear:hover { color: var(--txt-0); }
+
   .section-title { display: flex; align-items: center; justify-content: space-between; margin: 26px 2px 14px; }
   .section-title h3 { font-size: 15px; font-weight: 600; color: var(--txt-1); }
   .section-title .count { font-size: 12px; color: var(--txt-2); }
@@ -432,6 +449,7 @@
         </div>
       </div>
       <div class="chips" id="chips"></div>
+      <div class="chips recent" id="recentBox"></div>
     </div>
 
     <div class="section-title">
@@ -602,9 +620,46 @@ function closeDrawers() {
   $('#drawerMask').classList.remove('open');
 }
 
+// ---- 首页：最近搜索（localStorage 持久化，支持单条删除/全部清空） ----
+const RECENT_KEY = 'recent:searches';
+const RECENT_MAX = 10;
+function loadRecent() {
+  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY)); return Array.isArray(l) ? l : []; } catch { return []; }
+}
+function saveRecent(list) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX))); } catch {}
+}
+function addRecent(kw) {
+  kw = String(kw || '').trim();
+  if (!kw) return;
+  const list = loadRecent().filter(x => x !== kw);
+  list.unshift(kw);
+  saveRecent(list);
+  renderRecent();
+}
+function removeRecent(kw) {
+  saveRecent(loadRecent().filter(x => x !== kw));
+  renderRecent();
+}
+function clearRecent() {
+  saveRecent([]);
+  renderRecent();
+}
+function renderRecent() {
+  const box = $('#recentBox');
+  if (!box) return;
+  const list = loadRecent();
+  if (!list.length) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  box.innerHTML = '<span class="chips-label">最近搜索</span>' +
+    list.map(w => `<span class="chip recent-chip" data-kw="${esc(w)}">${esc(w)}<button class="chip-del" data-del="${esc(w)}" title="删除这条记录">×</button></span>`).join('') +
+    '<button class="chips-clear" id="clearRecent">清空</button>';
+}
+
 // ---- 首页：搜索 ----
 async function doSearch(kw) {
   const results = $('#results');
+  addRecent(kw);
   $('#resTitle').textContent = '搜索中…';
   $('#resCount').textContent = '';
   results.innerHTML = Array.from({length:6}).map(() => '<div class="skeleton-card"></div>').join('');
@@ -1031,6 +1086,16 @@ function init() {
   $('#searchBtn').addEventListener('click', triggerSearch);
   $('#chips').addEventListener('click', e => {
     if (e.target.classList.contains('chip')) { $('#q').value = e.target.dataset.kw; triggerSearch(); }
+  });
+
+  // 最近搜索：点击词条重新搜索；× 删除单条；清空全部
+  renderRecent();
+  $('#recentBox').addEventListener('click', e => {
+    const del = e.target.closest('[data-del]');
+    if (del) { e.stopPropagation(); removeRecent(del.dataset.del); return; }
+    if (e.target.closest('#clearRecent')) { clearRecent(); return; }
+    const chip = e.target.closest('.chip');
+    if (chip && chip.dataset.kw) { $('#q').value = chip.dataset.kw; triggerSearch(); }
   });
 
   // 首页结果事件委托
