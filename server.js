@@ -409,9 +409,19 @@ const server = http.createServer(async (req, res) => {
     // ---- 在线阅读（biquge5 源） ----
 
     // 书籍详情（含阅读目录）：GET /api/book/bq5?url=...
+    //   ?stage=info  只返回书籍信息（快，用于详情页立即出画面）
+    //   ?stage=full  返回完整目录（默认）
     if (p === '/api/book/bq5' && req.method === 'GET') {
       const url = q.get('url') || '';
       if (!url) return send(res, 400, { error: '缺少书籍链接 url' });
+      const stage = q.get('stage') || 'full';
+      if (stage === 'info') {
+        const info = await getBookCached('bq5info:' + url, async () => {
+          const book = await bq5.getBookInfoOnly(url);
+          return book;
+        });
+        return send(res, 200, info);
+      }
       const data = await getBookCached('bq5book:' + url, async () => {
         const book = await bq5.getBook(url);
         const reading = bq5.buildReadingList(book.chapters);
@@ -554,6 +564,10 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   console.log(`\n  笔趣阁小说下载器已启动：  ${url}\n  按 Ctrl+C 停止。\n`);
+  // 预热浏览器（启动约 2.6s + 导航站点约 1.3s）：放到后台，避免首次搜索/阅读白等 4s
+  core.getBrowserPage()
+    .then(() => console.log('  浏览器环境已就绪（抓取无需再等待启动）'))
+    .catch(() => console.log('  浏览器预热失败，首次抓取时会重试'));
   // 尝试自动打开浏览器（Windows）
   if (process.platform === 'win32') {
     exec(`start "" "${url}"`, () => {});

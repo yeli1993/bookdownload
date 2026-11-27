@@ -232,6 +232,19 @@
   .catalog-search input:focus { border-color: rgba(124,108,255,.55); }
   .catalog-list { max-height: 520px; overflow-y: auto; padding: 10px 12px;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 2px 10px; }
+
+  /* 目录加载进度 */
+  .cat-progress { grid-column: 1 / -1; padding: 26px 8px 18px; }
+  .cat-progress-bar {
+    height: 6px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden;
+  }
+  .cat-progress-bar i {
+    display: block; height: 100%; border-radius: 99px;
+    background: var(--grad); transition: width .25s ease;
+  }
+  .cat-progress-text {
+    margin-top: 10px; font-size: 12px; color: var(--txt-2); text-align: center;
+  }
   .cat-item {
     display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border-radius: 8px;
     font-size: 13px; color: var(--txt-1); cursor: pointer; transition: all .15s; white-space: nowrap;
@@ -736,12 +749,34 @@ async function openDetailByTitle(kw, id) {
 }
 
 // ---- 详情页 ----
+// 两阶段加载：先取书籍信息（~0.5s 出画面），再取完整目录（大书 1~3s）
+// 目录加载期间显示真实进度条，避免"转圈白等"
 async function openDetail(url, title) {
   state.bookUrl = url;
   state.source = 'bq5';
   showView('detail');
   $('#detailCrumb').textContent = title || '';
   $('#detailBody').innerHTML = '<div class="empty"><div class="spin" style="margin:0 auto"></div><p>正在加载书籍信息…</p></div>';
+
+  // 阶段 1：书籍信息（快）
+  let info = null;
+  try {
+    const r = await fetch(`${API}/api/book/bq5?stage=info&url=${encodeURIComponent(url)}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '加载失败');
+    info = d;
+    state.book = { ...d, reading: [], missing: [] };
+    state.reading = [];
+    renderDetailSkeleton(info);
+  } catch (e) {
+    $('#detailBody').innerHTML = `<div class="empty"><div class="big">!</div><p>${esc(e.message)}</p></div>`;
+    return;
+  }
+
+  // 阶段 2：完整目录（带进度反馈）
+  const t0 = Date.now();
+  const pages = info.totalPages || 1;
+  startCatalogProgress(pages);
   try {
     const r = await fetch(`${API}/api/book/bq5?url=${encodeURIComponent(url)}`);
     const book = await r.json();
@@ -749,9 +784,42 @@ async function openDetail(url, title) {
     state.book = book;
     state.reading = book.reading || [];
     renderDetail(book);
+    const sec = ((Date.now() - t0) / 1000).toFixed(1);
+    if (state.reading.length > 800) toast(`目录已就绪：${state.reading.length} 章（${sec}s）`, 'ok');
   } catch (e) {
-    $('#detailBody').innerHTML = `<div class="empty"><div class="big">!</div><p>${esc(e.message)}</p></div>`;
+    stopCatalogProgress();
+    $('#detailCatalog') && ($('#detailCatalog').innerHTML =
+      `<div class="empty" style="padding:24px 0"><p>目录加载失败：${esc(e.message)}</p>
+       <button class="btn btn-sm" id="retryCatalog" style="margin-top:10px">重试</button></div>`);
+    const btn = $('#retryCatalog');
+    if (btn) btn.addEventListener('click', () => openDetail(url, title));
   }
+}
+
+// 目录加载中的进度条（按页数估算，2.5s 内匀速推进到 90%，完成后由真实结果补齐）
+let _catTimer = null;
+function startCatalogProgress(pages) {
+  const box = $('#detailCatalog');
+  if (!box) return;
+  const estimate = Math.min(95, Math.max(25, pages * 8));
+  box.innerHTML = `<div class="cat-progress">
+      <div class="cat-progress-bar"><i id="catBar" style="width:6%"></i></div>
+      <div class="cat-progress-text" id="catPct">正在抓取目录…（共 ${pages} 页，约 ${pages * 100} 章）</div>
+    </div>`;
+  let pct = 6;
+  const step = () => {
+    pct = Math.min(estimate, pct + Math.max(1, estimate / 22));
+    const bar = $('#catBar'), txt = $('#catPct');
+    if (!bar) { clearInterval(_catTimer); _catTimer = null; return; }
+    bar.style.width = pct.toFixed(0) + '%';
+    if (txt) txt.textContent = `正在抓取目录… ${pct.toFixed(0)}%（共 ${pages} 页）`;
+  };
+  clearInterval(_catTimer);
+  _catTimer = setInterval(step, 120);
+}
+function stopCatalogProgress() {
+  clearInterval(_catTimer);
+  _catTimer = null;
 }
 
 // 主源（bqg713）详情页：笔趣阁5 无此书时使用
@@ -818,18 +886,91 @@ function renderDetail(book) {
   $('#detailCatFilter').addEventListener('input', e => renderCatalog(state.reading, $('#detailCatalog'), e.target.value.trim()));
 }
 
+// 阶段 1 渲染：先出书籍信息 + 目录进度占位（不阻塞画面）
+function renderDetailSkeleton(info) {
+  const ph = esc((info.title || '书')[0]);
+  $('#detailBody').innerHTML = `
+    <div class="book-head">
+      <div class="book-cover">${info.cover ? `<img src="${info.cover}" onerror="this.parentNode.innerHTML='${ph}'">` : ph}</div>
+      <div class="book-info">
+        <h1>${esc(info.title)}</h1>
+        <div class="book-tags">
+          <span class="tag">作者：${esc(info.author || '未知')}</span>
+          ${info.status ? `<span class="tag status">${esc(info.status)}</span>` : ''}
+          <span class="tag" id="detailCount">目录加载中…</span>
+          ${info.lastUpdate ? `<span class="tag">更新：${esc(info.lastUpdate)}</span>` : ''}
+        </div>
+        <div class="book-intro" title="${esc(info.intro || '')}">${esc(info.intro || '暂无简介')}</div>
+        <div class="book-actions">
+          <button class="btn btn-primary" disabled style="opacity:.5">开始阅读</button>
+          <button class="btn" data-action="download" data-source="bq5" data-url="${esc(info.url)}" data-title="${esc(info.title)}">下载全本</button>
+        </div>
+      </div>
+    </div>
+    <div class="catalog-panel">
+      <div class="catalog-head">
+        <h3>章节目录</h3>
+        <span class="note">点击章节开始阅读</span>
+        <div class="catalog-search">
+          <input id="detailCatFilter" type="search" placeholder="搜索章节标题 / 编号…" autocomplete="off" disabled />
+        </div>
+      </div>
+      <div class="catalog-list" id="detailCatalog"></div>
+    </div>`;
+}
+
+// 目录渲染：大书（2500+ 章）一次性插入会卡住数秒。
+// 策略：先渲染前 300 条立即出画面；滚动到接近底部时自动追加下一批（每次 300 条）。
+// 搜索时全量匹配（结果集通常很小）。
+const CAT_CHUNK = 300;
+let _catRenderToken = 0;
+let _catItems = [];       // 当前待渲染全集
+let _catShown = 0;        // 已渲染条数
+let _catContainer = null;
+
+function catItemHtml(c) {
+  const missing = !!c.missing;
+  const url = c.hrefs ? c.hrefs.join(',') : '';
+  return `<div class="cat-item" data-idx="${state.reading.indexOf(c)}" data-url="${esc(url)}">
+    <span class="no">${c.num}</span><span class="ti">${esc(c.title)}${missing ? '（缺失）' : ''}</span></div>`;
+}
+
 function renderCatalog(list, container, kw = '') {
+  if (!container) return;
+  const token = ++_catRenderToken;
   const items = kw
     ? list.filter(c => c.title.indexOf(kw) !== -1 || String(c.num) === kw)
     : list;
-  container.innerHTML = items.map(c => {
-    // 缺失标记由后端按原始编号判定（c.num 已被连续重编，不能直接与 missing 数组比对）
-    const missing = !!c.missing;
-    // 主源章节用 chapterid，bq5 用 hrefs
-    const url = c.hrefs ? c.hrefs.join(',') : '';
-    return `<div class="cat-item" data-idx="${state.reading.indexOf(c)}" data-url="${esc(url)}">
-      <span class="no">${c.num}</span><span class="ti">${esc(c.title)}${missing ? '（缺失）' : ''}</span></div>`;
-  }).join('');
+
+  // 搜索/小列表：一次渲染完
+  if (kw || items.length <= CAT_CHUNK) {
+    container.innerHTML = items.map(catItemHtml).join('');
+    _catItems = []; _catShown = 0; _catContainer = null;
+    return;
+  }
+
+  // 大列表：首批 + 滚动追加
+  _catItems = items;
+  _catShown = 0;
+  _catContainer = container;
+  container.innerHTML = '';
+  const appendChunk = () => {
+    if (token !== _catRenderToken || !_catContainer) return;
+    const end = Math.min(_catShown + CAT_CHUNK, _catItems.length);
+    const frag = document.createElement('div');
+    frag.innerHTML = _catItems.slice(_catShown, end).map(catItemHtml).join('');
+    while (frag.firstChild) _catContainer.appendChild(frag.firstChild);
+    _catShown = end;
+  };
+  appendChunk();
+  // 剩余部分在滚动接近底部时追加（避免 rAF 在后台标签页被节流导致渲染停滞）
+  container.onscroll = () => {
+    if (token !== _catRenderToken) return;
+    if (_catShown >= _catItems.length) { container.onscroll = null; return; }
+    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 200) {
+      appendChunk();
+    }
+  };
 }
 
 // ---- 阅读器 ----
