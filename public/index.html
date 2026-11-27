@@ -1182,7 +1182,14 @@ function init() {
   $('#goHome').addEventListener('click', () => { showView('home'); });
 
   // 阅读器控制
-  $('#rbBack').addEventListener('click', () => { if (state.bookUrl) openDetail(state.bookUrl, state.book ? state.book.title : ''); });
+  $('#rbBack').addEventListener('click', () => {
+    // 主源书籍（bookUrl = main:<id>）走主源详情页，bq5 书籍走换源详情页
+    if (state.source === 'main' && state.book && state.book.id) {
+      openDetailMain(state.book.id);
+    } else if (state.bookUrl) {
+      openDetail(state.bookUrl, state.book ? state.book.title : '');
+    }
+  });
   $('#rbPrev').addEventListener('click', () => goChapter(-1));
   $('#rbNext').addEventListener('click', () => goChapter(1));
   $('#rbCatalog').addEventListener('click', openReaderCatalog);
